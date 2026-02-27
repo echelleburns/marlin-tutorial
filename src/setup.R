@@ -6,17 +6,24 @@
 ## General setup script to source throughout 
 ## ::::::::::::::::::::::::::::::::::::::::::
 
-# Define model region
-model_region <- sf::st_bbox(c(xmin = -65.02, xmax = -64.4, 
-                              ymin = 17.58, ymax = 17.89))
+# Define model region in wgs84
+model_region_4326 <- sf::st_bbox(c(xmin = -65.02, xmax = -64.4, 
+                                   ymin = 17.58, ymax = 17.89), 
+                                 crs = "epsg:4326")
 
-# Define resolution in decimal degrees
-resolution <- 0.01
+# Define desired CRS
+crs <- "epsg:8118"
+
+# Define model region in updated CRS
+model_region <- sf::st_transform(model_region_4326, crs)
+
+# Define resolution in meters (5x5 km)
+resolution <- 5000
 
 # Define raster
 model_raster <- terra::rast(xmin = model_region[["xmin"]], 
                             xmax = model_region[["xmax"]], 
                             ymin = model_region[["ymin"]], 
                             ymax = model_region[["ymax"]], 
-                            crs = "epsg:4326", 
+                            crs = crs, 
                             resolution = resolution)
