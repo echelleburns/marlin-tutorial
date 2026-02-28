@@ -27,3 +27,5 @@ model_raster <- terra::rast(xmin = model_region[["xmin"]],
                             ymax = model_region[["ymax"]], 
                             crs = crs, 
                             resolution = resolution)
+
+model_raster_4326 <- terra::project(model_raster, "epsg:4326")
