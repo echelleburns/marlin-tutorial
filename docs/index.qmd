@@ -350,7 +350,7 @@ One fun thing to note here is that `marlin` does allow for the incorporation of 
 
 ### Create the `fauna` object
 
-Now we can create our `fauna` object for `marlin`. Here, we specify all the life-history characteristics, movement data, and habitat preferences. One important thing to note here is that if we *don't* have separate habitat matrix layers for adults and recruits to the fishery, we need to specify the habitat matrix that we have for both the adults and the recuits, otherwise `marlin` will let recruits spawn on land and then they will get stuck there (sad recruits). 
+Now we can create our `fauna` object for `marlin`. Here, we specify all the life-history characteristics, movement data, and habitat preferences. One important thing to note here is that if we *don't* have separate habitat matrix layers for adults and recruits to the fishery, we need to specify the habitat matrix that we have for both the adults and the recruits, otherwise `marlin` will let recruits spawn on land and then they will get stuck there (sad recruits). 
 
 ```{r}
 fauna <- list("stoplight" = create_critter(scientific_name = "sparisoma viride", 
@@ -470,7 +470,7 @@ Finally, we have to decide how our fleet should respond to changes in management
 For this example, we make the following decisions: 
 
 - If an MPA is implemented, fishers will **leave** and their effort will be removed from the study area. 
-- We expect fishers to fish under **constant effort** (until a management change takes place). Dan warns against using open access unless it's absolutely necessary because it adds more levels of complexity that make interpreting results more difficult. Note that if you do choose to use open access, you will have to determine whether your fishery is currently in equilibirum and set the cost-to-revenue ratio (`cr_ratio`) as appropriate.
+- We expect fishers to fish under **constant effort** (until a management change takes place). Dan warns against using open access unless it's absolutely necessary because it adds more levels of complexity that make interpreting results more difficult. Note that if you do choose to use open access, you will have to determine whether your fishery is currently in equilibrium and set the cost-to-revenue ratio (`cr_ratio`) as appropriate.
 - We expect fishers to spatially distribute based on **revenues**. 
 
 ### Create the `fleet` object
