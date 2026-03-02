@@ -94,7 +94,7 @@ steps <- 50
 seasons <- 1
 ```
 
-From these values, we can define more values that are necessary for `marlin`. These include defining the model area and cell size, and making several templates for the model region (raster, data.frame). We will do this below by first defining the model area as a raster: 
+From these values, we can define more values that are necessary for `marlin`. These include defining the model area and cell size, and making several templates for the model region (`raster`, `data.frame`). We will do this below by first defining the model area as a raster: 
 
 ```{r}
 # Define raster
@@ -350,7 +350,7 @@ One fun thing to note here is that `marlin` does allow for the incorporation of 
 
 ### Create the `fauna` object
 
-Now we can create our `fauna` object for `marlin`. Here, we specify all the life-history characteristics, movement data, and habitat preferences. One important thing to note here is that if we *don't* have separate habtiat matrix layers for adults and recruits to the fishery, we need to specify the habitat matrix that we have for both the adults and the recuits, otherwise `marlin` will let recruits spawn on land and then they will get stuck there (sad recruits). 
+Now we can create our `fauna` object for `marlin`. Here, we specify all the life-history characteristics, movement data, and habitat preferences. One important thing to note here is that if we *don't* have separate habitat matrix layers for adults and recruits to the fishery, we need to specify the habitat matrix that we have for both the adults and the recuits, otherwise `marlin` will let recruits spawn on land and then they will get stuck there (sad recruits). 
 
 ```{r}
 fauna <- list("stoplight" = create_critter(scientific_name = "sparisoma viride", 
@@ -395,7 +395,7 @@ Fishing for Stoplight Parrotfish in St. Croix can be done via spearfishing, by h
 
 ![Selectivity curves for Stoplight Parrotfish provided by SEDAR, 2025](../figures/stoplight_parrotfish_selectivity_curve.png)
 
-`marlin` allows you to enter selectivity at length parameters for dome-shaped, logistic, or double-normal curves. However, I find it easier to supply a manual selectivity curve so that I'm sure `marlin` interprets the selectivity parameter the way I want it to. I used ImageJ to grab the x and y coordinates for the selectivity curves presented in SEDAR (2025) and saved them to our `data/processed` folder. We can read them in now. 
+`marlin` allows you to enter selectivity at age parameters for dome-shaped, logistic, or double-normal curves. However, I find it easier to supply a manual selectivity curve so that I'm sure `marlin` interprets the selectivity parameter the way I want it to. I used ImageJ to grab the x and y coordinates for the selectivity curves presented in SEDAR (2025) and saved them to our `data/processed` folder. We can read them in now. 
 
 ```{r}
 selectivity <- read.csv(here::here("data", "processed", "selectivity_curve.csv")) %>% 
@@ -451,7 +451,7 @@ p_explt <- 1
 
 ### Landing price
 
-We also need to specify a price per species, so that a fleet that targets multiple species knows which species to prioritize catching. For example, if a fleet targets 3 species, but would rather catch species A because it's more valuable, the price for that species should be higher than the price for others. The best way to find these values is by looking up ex-vessel prices for each of the species you're modeling (ideally specific to the model region). Just make sure that the price is relative to the units that you've used for our `fauna` parameter. Since we've specified values in kg, we would want our price to be in USD/kg. 
+We also need to specify a price per species, so that a fleet that targets multiple species knows which species to prioritize catching. For example, if a fleet targets 3 species, but would rather catch species A because it's more valuable, the price for that species should be higher than the price for others. The best way to find these values is by looking up ex-vessel prices for each of the species you're modeling (ideally specific to the model region). Just make sure that the price is relative to the units that you've used for your `fauna` parameter. Since we've specified values in kg, we would want our price to be in USD/kg. 
 
 [Callwood et al., (2021)](https://www.sciencedirect.com/science/article/pii/S2351989421002274) report that parrotfish in the Bahamas can sell for 2.21 to 44.09 USD per kg. We'll choose a value in the middle - 18 USD/kg. 
 
@@ -490,8 +490,7 @@ fleet <- list(
           p_explt = p_explt)), 
     mpa_response = "leave", 
     fleet_model = "constant effort",
-    spatial_allocation = "revenue", 
-    cr_ratio = 1, 
+    spatial_allocation = "revenue",
     resolution = model_parameters$resolution, 
     patch_area = model_parameters$patch_area_km2, 
     fishing_grounds = fishing_grounds_df
@@ -553,7 +552,7 @@ Our output is a list, with `tibbles` for `fauna` (which includes species-, patch
 
 Now we can jump into using `plot_marlin()` to see some outputs of these results. 
  
-First, let's check our spatial results at year 1 - they should look identical:
+First, let's check our spatial results at year 1 - they should look identical. They should show no catch in existing MPAs and catch proportional to the habitat matrix otherwise:
 
 ```{r fig.cap = "Spatial `marlin` output for catch (kg) from our BAU and MPA-implemented model runs at year 1."}
 plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented, 
@@ -564,7 +563,7 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
   coord_sf()
 ```
 
-Now again at year 30 - they should look different now: 
+Now again at year 30 - they should look different now. The BAU result should look the same as the results for year 1, but the MPA scenario should show no catch in the newly proposed MPA area: 
 
 ```{r fig.cap = "Spatial `marlin` output for catch (kg) from our BAU and MPA-implemented model runs at year 30."}
 plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented, 
@@ -592,11 +591,38 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
   geom_vline(xintercept = 5, linetype = "dashed")
 ```
 
-These results are a little wonky too, we see that catch (and spawning stock biomass) both start really high, which leads to a population crash. The population then begins to recover/stabilize as catch rates flatted out at a lower level. We see this in both the BAU and the MPA scenarios, which gives us a bit of a red flag. For our example, we assume that the state of the fishery is in equilibrium under BAU - which means we expect our BAU lines to be incredibly stable. We discuss how to achive this in the next section. 
+These results are a little wonky too, we see that catch (and spawning stock biomass) both start really high, which leads to a population crash. The population then begins to recover/stabilize as catch rates flatted out at a lower level. We see this in both the BAU and the MPA scenarios, which is a bit of a red flag. For our example, we assume that the state of the fishery is in equilibrium under BAU - which means we expect our BAU lines to be incredibly stable. We discuss how to achieve this in the next section. 
+
+Before we get into that, we will often want to use this as a means to see how total revenues change with the implementation of on MPA. This isn't something that we can plot using `plot_marlin()`, so let's plot it manually below. For this model run, since we didn't specify landing sites, `marlin` calculates revenues as the product of catch and the supplied price variable. 
+
+```{r fig.cap = "Total revenue per year over time, under BAU and after an MPA is implemented in year 5."}
+revenues <- processed_bau$fleets %>% 
+  mutate(model = "BAU") %>% 
+  bind_rows(processed_implemented$fleets %>% 
+              mutate(model = "Implemented")) %>% 
+  group_by(year, model) %>% 
+  summarise(total_revenue = sum(revenue, na.rm = T)) %>% 
+  ungroup() 
+
+ggplot() + 
+  geom_line(data = revenues, 
+            mapping = aes(x = year, y = total_revenue, color = model), 
+            linewidth = 2) +  
+  scale_color_manual(values = c("BAU" = "black", "Implemented" = "gray")) + 
+  geom_vline(xintercept = 5, linetype = "dashed") + 
+  labs(color = NULL, 
+       x = "Year", 
+       y = "Total revenue (USD)") + 
+  scale_y_continuous(limits = c(0, NA), labels = scales::comma) + 
+  theme_marlin() + 
+  theme(legend.position = "top")
+```
+
+Ok ok, enough crazy results. Let's make these make more sense.
 
 # Adjusting the model to meet starting equilibrium conditions
 
-We want our BAU model to be stable over time. One way to achieve this is by adding a manual "burn in" period, under which time models are allowed to stabilize before an MPA is implemented. To do this, we will essentially run the model for additional years and discard the years that we designate as "burn in" years. The population under BAU began to stabilize around year 40 in the above example, so we'll add 35 additional years to our model. 
+We want our BAU model to be stable over time. One way to achieve this is by adding a manual "burn in" period, under which time models are allowed to stabilize before an MPA is implemented. To do this, we will essentially run the model for additional years and discard the years that we designate as "burn in" years. The population under BAU began to stabilize around year 40 in the above example, so we'll add that many additional years to our model. 
 
 ```{r}
 burn_years <- 40
@@ -665,4 +691,27 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
   geom_vline(xintercept = 5, linetype = "dashed")
 ```
 
-We now have results that look much more stable under BAU, and there's a clear change to both catch and spawning stock biomass when the MPA is implemented. 
+We now have results that look much more stable under BAU, and there's a clear change to both catch and spawning stock biomass when the MPA is implemented. We can look at our revenue results again: 
+
+```{r fig.cap = "Total revenue per year over time, under BAU and after an MPA is implemented in year 5."}
+revenues <- processed_bau$fleets %>% 
+  mutate(model = "BAU") %>% 
+  bind_rows(processed_implemented$fleets %>% 
+              mutate(model = "Implemented")) %>% 
+  group_by(year, model) %>% 
+  summarise(total_revenue = sum(revenue, na.rm = T)) %>% 
+  ungroup() 
+
+ggplot() + 
+  geom_line(data = revenues, 
+            mapping = aes(x = year, y = total_revenue, color = model), 
+            linewidth = 2) +  
+  scale_color_manual(values = c("BAU" = "black", "Implemented" = "gray")) + 
+  geom_vline(xintercept = 5, linetype = "dashed") + 
+  labs(color = NULL, 
+       x = "Year", 
+       y = "Total revenue (USD)") + 
+  scale_y_continuous(limits = c(0, NA), labels = scales::comma) + 
+  theme_marlin() + 
+  theme(legend.position = "top")
+```
