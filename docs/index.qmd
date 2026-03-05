@@ -385,7 +385,8 @@ We can also look at the movement plots for our defined `fauna`:
 ```{r}
 fauna$stoplight$plot_movement()
 ```
-[ EB to add something here, doesn't really make sense to me at the minute. ]
+
+Here, we can see that the adults in the fishery typically stay their starting position, which matches well with what we would expect for a reef-associated species with a small home range. 
 
 ## Fleet parameters
 
