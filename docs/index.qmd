@@ -69,7 +69,16 @@ library(plot.matrix)
 
 In this tutorial, we will be modeling the Stoplight Parrotfish (*Sparisoma viride*) population in St. Croix (shout out to Lewis for the species selection!). 
 
-![Lewis with his favorite fish friends](../figures/lewis.jpg){width="50%"}
+<style type="text/css">
+.topalign img {
+  vertical-align: top;
+}
+</style>
+
+<div class="topalign">
+![Lewis with his favorite fish friends](../figures/lewis.jpg){width="48%"}
+![Lewis with his favorite fish friends](../figures/small_area.png){width="48%"}
+</div>
 
 `marlin` requires a lot of data and requires you to be diligent in making sure the data you import is accurate and consistent. We're going to spend a lot of time setting up the model, and very little time actually running it! 
 
@@ -302,14 +311,14 @@ We define as many life history variables as we can above, but note that there ar
 
 ### Species movement - home range 
 
-Next, we need to find an appropriate home range for the species. We can often find this in the literature from telemetry studies. `marlin` uses home range to predict a "diffusion" rate, or an average distance that an animal is expected to move over one time step. `marlin` can account for species movement in three ways 1) "taxis", or the direct movement from less preferred habitats to more preferred ones (derived from the habitat matrix that we'll supply later), 2) "diffusion" (derived from the home range parameter), and 3) "advection", or movement associated by drifting with the currents. Advection is currently set to 0 in this version of `marlin`. Notice that the diffusion parameter should not include directed movements to preferred habitats - when we're searching the literature for a home range, we want to make sure that the value we use was not calculated from individuals that were translocated (moved to a different site to see if they would return to their capture location) or that were undergoing migrations to/from habitats for activities like spawning. Another important thing to note is that the home range that `marlin` is actually a *linear distance*, and most reported home ranges are *areas*. When we add the home range value to `marlin`, we need to make sure that it has the same units as our model area (here, km) and is a linear distance (the square root of a reported home range area).
+Next, we need to find an appropriate home range for the species. We can often find this in the literature from telemetry studies. `marlin` uses home range to predict a "diffusion" rate, or an average distance that an animal is expected to move over one time step. `marlin` can account for species movement in three ways 1) "taxis", or the direct movement from less preferred habitats to more preferred ones (derived from the habitat matrix that we'll supply later), 2) "diffusion" (derived from the home range parameter), and 3) "advection", or movement associated by drifting with the currents. Advection is currently set to 0 in this version of `marlin`. Notice that the diffusion parameter should *not* include directed movements to preferred habitats - when we're searching the literature for a home range, we want to make sure that the value we use was not calculated from individuals that were translocated (moved to a different site to see if they would return to their capture location) or that were undergoing migrations to/from habitats for activities like spawning. Another important thing to note is that the home range that `marlin` is actually a *linear distance*, and is used to determine the distance from the starting point that roughly 95% of fish are within after one time step. However, most home ranges reported in the literature are *areas*. When we add the home range value to `marlin`, we need to make sure that it has the same units as our model area (here, km) and is a linear distance. If we envision the literature reported home range area as a *circle*, we can convert it to a linear distance using the square root of the quotient of the reported home range area divided by pi.
 
-After a quick search of Google Scholar, I was unable to find a home range estimate for Stoplight Parrotfish in La Croix. I did, however, find estimated territory ranges of Stoplight Parrotfish in the Florida Keys. While not ideal, we can use this estimate as a starting point to get `marlin` running. If we were to use this for a real research project, we would probably want to run a sensitivity analysis with different home range values to see how much our results would change if our selected home range was wrong.
+After a quick search of Google Scholar, I was unable to find a home range estimate for Stoplight Parrotfish in La Croix. I did, however, find estimated territory ranges of Stoplight Parrotfish in the Florida Keys. While not ideal, we can use this estimate as a starting point (and low end estimate) to get `marlin` running. If we were to use this for a real research project, we would probably want to run a sensitivity analysis with different home range values to see how much our results would change if our selected home range was wrong.
 
 [Smith et al., (2023)](https://link.springer.com/article/10.1007/s10641-023-01394-1#Sec6) find that some Stoplight Parrotfish had territory sizes up to 282.6 $m^2$, so we'll use that value for now. We want to make sure that the home range we supply is a linear distance and is the same units that we use for our model region (km). 
 
 ```{r}
-home_range <- sqrt(282.6)/1000
+home_range <- sqrt(282.6/pi)/1000
 ```
 
 ### Habitat preferences
