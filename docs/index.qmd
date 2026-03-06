@@ -29,11 +29,24 @@ devtools::install_github("DanOvando/marlin")
 
 Because `marlin` is built using C++ on the back end, there are sometimes installation issues that occur. There are several GitHub issues in the `marlin` repository for troubleshooting this issue, so first see if your error has already been experienced. Otherwise, feel free to add a new issue to the repository. 
 
-Here are some of the install issues with resolutions: 
+Here are some of the install issues with solutions: 
 
 - If you are getting compilation errors or API rate limit errors: see [this issue](https://github.com/DanOvando/marlin/issues/12) and [this issue](https://github.com/DanOvando/marlin/issues/115)
 - If you have an Apple M1 chip and are getting a `clang` error: [see issue](https://github.com/DanOvando/marlin/issues/72)
 - If you are getting errors about not having the necessary tools to compile a package: [see issue](https://github.com/DanOvando/marlin/issues/106)
+
+If you have a Mac, one of the most sure fire ways to get `marlin` to load is to use [`macrtools`](https://github.com/coatless-mac/macrtools) and run through the following script: 
+
+```{r eval = FALSE}
+# install.packages("remotes")
+remotes::install_github("coatless-mac/macrtools")
+
+# Remove all rtools first (xcode, gfortran, etc.)
+macrtools::macos_rtools_uninstall()
+
+# Re-install all rtools
+macrtools::macos_rtools_install()
+```
 
 We will also be using `tidyverse`, `sf`, `terra`, and `plot.matrix`.
 
@@ -357,6 +370,7 @@ fauna <- list("stoplight" = create_critter(scientific_name = "sparisoma viride",
                                            adult_home_range = home_range, 
                                            habitat = habitat_matrix, 
                                            recruit_habitat = habitat_matrix,
+                                           density_dependence = "local_habitat", 
                                            linf = lh$linf,
                                            vbk = lh$vbk,
                                            t0 = lh$t0,
@@ -376,17 +390,33 @@ fauna <- list("stoplight" = create_critter(scientific_name = "sparisoma viride",
 
 We can check that our `fauna` object looks okay by plotting our values at age: 
 
-```{r}
+```{r fig.cap = "Fauna values at age."}
 fauna$stoplight$plot()
 ```
 
 We can also look at the movement plots for our defined `fauna`: 
 
-```{r}
+```{r fig.cap = "Movement of post-recruits and recruits."}
 fauna$stoplight$plot_movement()
 ```
 
-Here, we can see that the adults in the fishery typically stay their starting position, which matches well with what we would expect for a reef-associated species with a small home range. 
+Here, we can see that the post-recruits (adults) in the fishery typically stay their starting position, which matches well with what we would expect for a reef-associated species with a small home range. For the recruits, "movement" relies on density dependence. The recruit plot shows the proportion of the total number of recruits that are in each cell. In our example, these values are very small so they all look like 0s when the color scale ranges from 0-1. We can plot this by itself if we're curious, but it should look similar to the habitat layer we provide, since the habitat layer is what is used to spatially distribute the number of recruits. 
+
+```{r fig.cap = "Rescaled recruit movement plot, which is essentially the spatial distribution of recruits and is dependent on the habitat matrix that is supplied."}
+model_df_template %>% 
+  mutate(r0s = fauna$stoplight$r0s, 
+         r0s_scaled = r0s/sum(r0s)) %>% 
+  ggplot() + 
+  geom_tile(mapping = aes(x = x_matrix, y = y_matrix, fill = r0s_scaled)) + 
+  scale_fill_viridis_c() + 
+  labs(fill = "Proportion of recruits") + 
+  coord_sf() + 
+  theme_void() + 
+  theme(legend.position = "bottom", 
+        legend.title = element_text(vjust = 0.8), 
+        legend.text = element_text(angle = 45, hjust = 1))
+```
+
 
 ## Fleet parameters
 
