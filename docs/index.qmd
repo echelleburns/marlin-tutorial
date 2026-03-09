@@ -309,6 +309,8 @@ lh <- list(
 
 We define as many life history variables as we can above, but note that there are many more that we could provide if we had the data. See `?Fish` for a full list of parameters.
 
+One thing to note is that the reported `steepness` parameter is very high (0.99). This means that the number of recruits is virtually independent from the spawning stock biomass; the number of recruits each year will be constant despite changes to spawning stock biomass. Since this is reported in the most recent assessment, we'll keep it here, but this is something to keep in mind if the results of the model are not what we would expect based on local knowledge of the population.
+
 ### Species movement - home range 
 
 Next, we need to find an appropriate home range for the species. We can often find this in the literature from telemetry studies. `marlin` uses home range to predict a "diffusion" rate, or an average distance that an animal is expected to move over one time step. `marlin` can account for species movement in three ways 1) "taxis", or the direct movement from less preferred habitats to more preferred ones (derived from the habitat matrix that we'll supply later), 2) "diffusion" (derived from the home range parameter), and 3) "advection", or movement associated by drifting with the currents. Advection is currently set to 0 in this version of `marlin`. Notice that the diffusion parameter should *not* include directed movements to preferred habitats - when we're searching the literature for a home range, we want to make sure that the value we use was not calculated from individuals that were translocated (moved to a different site to see if they would return to their capture location) or that were undergoing migrations to/from habitats for activities like spawning. Another important thing to note is that the home range that `marlin` is actually a *linear distance*, and is used to determine the distance from the starting point that roughly 95% of fish are within after one time step. However, most home ranges reported in the literature are *areas*. When we add the home range value to `marlin`, we need to make sure that it has the same units as our model area (here, km) and is a linear distance. If we envision the literature reported home range area as a *circle*, we can convert it to a linear distance using the square root of the quotient of the reported home range area divided by pi. For more information see [this issue](https://github.com/DanOvando/marlin/issues/126).
@@ -370,6 +372,33 @@ The orientation seems right in each of these plots!
 
 One fun thing to note here is that `marlin` does allow for the incorporation of climate change via multiple habitat layers (one per step). So, if you have the data handy, you can provide `marlin` with a list of habitat matrices for each projected time step. See the [Set Dynamic Habitats](https://danovando.github.io/marlin/articles/dynamic-habitat.html) vignette for more information. 
 
+### Thinking about recruitment
+
+We also need to think about what the most appropriate recruitment parameters are. First, we need to decide the density dependence for recruits. There are currently five options: 
+
+1. "global_habitat" - density dependence operates on the total spawning stock biomass summed across all patches and recruits are distributed according to the habitat layer
+2. "local_habitat" - density dependence is local and recruits stay in the patch they were produced (there's no movement)
+3. "pre_dispersal" - density dependence is local to the spawning patch based on the local spawning stock biomass, but recruits are distributed according to the habitat layer
+4. "post_dispersal" - larvae disperse according to the habitat layer and density dependence occurs at the destination patch based on local spawning stock biomass
+5. "global_ssb" - density dependence operates on the total spawning stock biomass summed across all patches and recruits are allocated in proportion to the spatial distribution of the spawning stock biomass (not the habitat layer)
+
+Given that Stoplight Parrotfish have a larval period, maybe using "post_dispersal" is the right call here - larvae can move about and settle in the most preferred habitats, where competition occurs based on biomass to see how many recruits survive to make it to the fishery.
+
+```{r}
+density_dependence <- "post_dispersal"
+```
+
+
+For more information on these recruitment parameters, see [here](https://danovando.github.io/marlin/articles/recruitment-dynamics.html#recruitment-in-marlin). 
+
+Another thing we need to think about is the dispersal distance (or the "home range") of these recruits. [Robertson et al., (2006)](https://doi.org/10.1016/j.ympev.2006.04.011) and [Robertson and van Tassel (2015)](http://biogeodb.stri.si.edu/caribbean/es/pages) report Stoplight Parrotfish larvae can have a pelagic duration fo 47-80 days. Modeling efforts of stochasticity in larval connectivity, using the California coast as a case study, estimate that settlement could occur upwards of 500 km from the origin location ([Seigel et al., 2008](https://www.pnas.org/doi/full/10.1073/pnas.0802544105)]. There are no current studies of larval connectivity in St. Croix, so this is another variable that we will need to "guesstimate" and do a sensitivity analysis. For now, let's assume a larval home range of 250 km (somewhere in the middle). 
+
+```{r}
+recruit_home_range <- 250
+```
+
+If we find that our results aren't what we expect, this might be the first thing we re-evaluate.
+
 ### Create the `fauna` object
 
 Now we can create our `fauna` object for `marlin`. Here, we specify all the life-history characteristics, movement data, and habitat preferences. One important thing to note here is that if we *don't* have separate habitat matrix layers for adults and recruits to the fishery, we need to specify the habitat matrix that we have for both the adults and the recruits, otherwise `marlin` will let recruits spawn on land and then they will get stuck there (sad recruits). 
@@ -377,9 +406,10 @@ Now we can create our `fauna` object for `marlin`. Here, we specify all the life
 ```{r}
 fauna <- list("stoplight" = create_critter(scientific_name = "sparisoma viride", 
                                            adult_home_range = home_range, 
+                                           recruit_home_range = recruit_home_range, 
                                            habitat = habitat_matrix, 
                                            recruit_habitat = habitat_matrix,
-                                           density_dependence = "local_habitat", 
+                                           density_dependence = density_dependence, 
                                            linf = lh$linf,
                                            vbk = lh$vbk,
                                            t0 = lh$t0,
@@ -481,7 +511,7 @@ If we wanted to model many species or many fisheries, we would need selectivity 
 
 ### Relative exploitation rate
 
-We also need to supply a relative exploitation rate (`p_explt`) for each species that a fleet targets. When we're only modeling one species and one fleet, `p_explt` = 1. However, when multiple fleets target the same species, we would need to think about our `p_explt` values. For example, if fleet A and fleet B are both fishing for Stoplight Parrotfish, but fleet A is responsible for 2/3 of the total catch of the species, reasonable `p_explt` values would be 2 for fleet A and 1 for fleet B. The best way to figure out which `p_explt` values to use would be to find landings data and calculate the relative contribution of each fleet to a species' total landings. If a species is caught as bycatch, `p_explt` can be 0.
+We also need to supply a relative exploitation rate (`p_explt`) for each species that a fleet targets. When we're only modeling one species and one fleet, `p_explt` = 1. However, when multiple fleets target the same species, we would need to think about our `p_explt` values. For example, if fleet A and fleet B are both fishing for Stoplight Parrotfish, but fleet A is responsible for 2/3 of the total catch of the species, reasonable `p_explt` values would be 2 for fleet A and 1 for fleet B. The best way to figure out which `p_explt` values to use would be to find landings data and calculate the relative contribution of each fleet to a species' total landings. If a species is caught at all by a fleet, even as bycatch `p_explt` > 0.
 
 We'll use a `p_explt` of 1 for our example: 
 
@@ -498,6 +528,8 @@ We also need to specify a price per species, so that a fleet that targets multip
 ```{r}
 price <- 18
 ```
+
+The `price` parameter is where you could best account for true bycatch species, where there is no true economic incentive for catching the species (`price` = 0). You can also include negative prices to indicate that fishers want to to avoid catching that species; this is useful for protected species that are subject to penalties if landed. 
 
 ### How should our fleet respond to management changes
 
@@ -603,7 +635,7 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
   coord_sf()
 ```
 
-Now again at year 30 - they should look different now. The BAU result should look the same as the results for year 1, but the MPA scenario should show no catch in the newly proposed MPA area: 
+Now again at year 30 - they should look different now. The BAU result should allow fishing in the same regions as it did in year 1, but the MPA scenario should show no catch in the newly proposed MPA area: 
 
 ```{r fig.cap = "Spatial `marlin` output for catch (kg) from our BAU and MPA-implemented model runs at year 30."}
 plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented, 
@@ -622,7 +654,8 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
             max_scale = FALSE) + 
   geom_vline(xintercept = 5, linetype = "dashed")
 ```
-These results look a little wonky, but we will come back to that. Let's also look at spawning stock biomass over time: 
+
+Let's also look at spawning stock biomass over time: 
 
 ```{r fig.cap = "Spawning stock biomass (kg) of Stoplight Parrotfish over time, under BAU and after an MPA is implemented in year 5."}
 plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented, 
@@ -631,7 +664,7 @@ plot_marlin('BAU' = processed_bau, 'Implemented' = processed_implemented,
   geom_vline(xintercept = 5, linetype = "dashed")
 ```
 
-These results are a little wonky too, we see that catch (and spawning stock biomass) both start really high, which leads to a population crash. The population then begins to recover/stabilize as catch rates flatted out at a lower level. We see this in both the BAU and the MPA scenarios, which is a bit of a red flag. For our example, we assume that the state of the fishery is in equilibrium under BAU - which means we expect our BAU lines to be incredibly stable. We discuss how to achieve this in the next section. 
+We see that catch (and spawning stock biomass) both start really high, which leads to a population crash. The population then begins to recover/stabilize as catch rates flatted out at a lower level. However, we notice that both the BAU and MPA scenarios show this same trend. For our example, we assume that the state of the fishery is in equilibrium under BAU - which means we want our BAU lines to be incredibly stable. We discuss how to achieve this in the next section. 
 
 Before we get into that, we will often want to use this as a means to see how total revenues change with the implementation of on MPA. This isn't something that we can plot using `plot_marlin()`, so let's plot it manually below. For this model run, since we didn't specify landing sites, `marlin` calculates revenues as the product of catch and the supplied price variable. 
 
@@ -658,11 +691,11 @@ ggplot() +
   theme(legend.position = "top")
 ```
 
-Ok ok, enough crazy results. Let's make these make more sense.
+It's hard for us to intrepret these results when we can see the model is not in equilibrium (like we want). So let's move on and run the model under equilibrium conditions. 
 
 # Adjusting the model to meet starting equilibrium conditions
 
-We want our BAU model to be stable over time. One way to achieve this is by adding a manual "burn in" period, under which time models are allowed to stabilize before an MPA is implemented. To do this, we will essentially run the model for additional years and discard the years that we designate as "burn in" years. The population under BAU began to stabilize around year 40 in the above example, so we'll add that many additional years to our model. 
+We want our BAU model to reflect that the fishery is in equilibrium and that results will be stable over time. One way to achieve this is by adding a manual "burn in" period, under which time models are allowed to stabilize before an MPA is implemented. To do this, we will essentially run the model for additional years and discard the years that we designate as "burn in" years. The population under BAU began to stabilize around year 40 in the above example, so we'll add that many additional years to our model. 
 
 ```{r}
 burn_years <- 40
@@ -755,3 +788,23 @@ ggplot() +
   theme_marlin() + 
   theme(legend.position = "top")
 ```
+
+# Other cool `marlin` features, tips, and tricks
+
+Dan is constantly working to improve `marlin` - making it faster, add new features, etc. 
+
+## Modeling at coarse- and fine-scale resolutions simultaneously
+
+One new feature that he's recently implemented is a "moat" of coarser scale cells around a fine-scale area of interest. This can come in handy if you're interested in modeling a species with a large distribution, but are primarily interested in the fine-scale results from a small section of the distribution area. We're still working to put this into practice using real-world data (see [issue](https://github.com/DanOvando/marlin/issues/127)), but there is a [vignette](https://danovando.github.io/marlin/articles/big-seas.html) on how to get started. 
+
+## Modeling discard mortality
+
+`marlin` currently does not allow for modeling discard mortality, where an animal is caught, released, and then has some probability of survival. If this is a feature you're interested in, feel free to start a new issue in the `marlin` github repository. As is, the only way to model discards is to treat is as a normal species and remove the catch data for that species after running `process_marlin()`. However, this would still assume a 100% mortality rate of discards, because the model is running under the assumption that caught fish are landed. 
+
+## If you expect an MPA to make a larger impact
+
+A lot of this modeling is theoretical, and your analyses will benefit greatly from running several sensitivity analyses (e.g., home range, recruitment parameters, etc.). If, given your knowledge of the fishery and/or species modeled, you expect your MPA to result in spillover from protected areas to non-protected areas, you will need to tweak your input parameters. The most likely culprits are: 
+
+- Your `steepness` value is too high - steepness values close to 1 indicate that the number of recruits is independent from the spawning biomass; if spawning biomass increases (or decreases), the number of recruits stay the same
+- Your larval `home_range` is too small - if the larvae are forced to occupy small areas, they will never have the opportunity to move out of the protected region; the number of recruits will constantly be limited by the density dependence within the protected area
+- Your `density_dependence` choice was wrong - if you choose a density dependence such as "local_habitat", your larvae aren't dispersing to new areas at all; again, they're stuck where they spawn and are limited by the space available in that single area
