@@ -561,7 +561,7 @@ fleet <- list(
           sel_at_age = selectivity_values, 
           p_explt = p_explt)), 
     mpa_response = "leave", 
-    fleet_model = "constant effort",
+    fleet_model = "constant_effort",
     spatial_allocation = "revenue",
     resolution = model_parameters$resolution, 
     patch_area = model_parameters$patch_area_km2, 
