@@ -582,6 +582,10 @@ Phew! Ok, now we have all of our components ready to run the model!
 
 # Running the model
 
+Now that we can run the model, here's a quick schematic of how `marlin` thinks: 
+
+![The steps of the marlin model.](../figures/marlin-flow.jpg)
+
 We can start by running a business as usual (BAU) model. First, we want to make sure that we're incorporating any existing management measures in our BAU model and in our MPA model. SEDAR (2025) mentions that there is an annual catch limit of 72,365 lbs (~32,824 kg). This is actually spread across two parrotfish species, but we'll just keep it as is for now since we don't know what proportion of total catch the Stoplight Parrotfish make up. We can specify this in our model using the `manager` argument in `simmar()`. Creating a model in `marlin` requires to parts: first `simmar()` creates the simulation, then `process_marlin()` processes the results so that we can better understand them. We do both below for BAU: 
 
 ```{r}
